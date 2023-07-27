@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<html lang="en">
     <head>
         <script class="jsbin" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
         <script type="javascript/text">
@@ -12,6 +13,8 @@
                     $('.file-title').html(input.files[0].name);
                   };
                   reader.readAsDataURL(input.files[0]);
+                  // development: http://127.0.0.1:5000/default/pdftoexcel
+                  // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
                 } else {
                   removeUpload();
                 }
