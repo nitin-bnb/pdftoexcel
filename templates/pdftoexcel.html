@@ -13,8 +13,20 @@
                     $('.file-title').html(input.files[0].name);
                   };
                   reader.readAsDataURL(input.files[0]);
-                  // development: http://127.0.0.1:5000/default/pdftoexcel
-                  // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
+                  var formData = new FormData();
+                  formData.append('file', input.files[0]);
+                  $.ajax({
+                      type: 'POST',
+                      url: 'http://127.0.0.1:5000/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
+                      data: formData,
+                      processData: false,
+                      contentType: false,
+                      success: function (data) {
+                        window.open(data['excel_file'] , '_blank');
+                      },
+                      error: function (xhr, ajaxOptions, thrownError) {
+                      }
+                  })
                 } else {
                   removeUpload();
                 }
