@@ -2,33 +2,37 @@
 <html lang="en">
     <head>
         <script class="jsbin" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
-        <script type="javascript/text">
+        <script type="text/javascript">
             function readURL(input) {
                 if (input.files && input.files[0]) {
-                  var reader = new FileReader();
-                  reader.onload = function(e) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
                     $('.file-upload-wrap').hide();
                     $('.file-upload-file').attr('src', e.target.result);
                     $('.file-upload-content').show();
                     $('.file-title').html(input.files[0].name);
-                  };
-                  reader.readAsDataURL(input.files[0]);
-                  var formData = new FormData();
-                  formData.append('file', input.files[0]);
-                  $.ajax({
-                      type: 'POST',
-                      url: 'http://127.0.0.1:5000/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
-                      data: formData,
-                      processData: false,
-                      contentType: false,
-                      success: function (data) {
-                        window.open(data['excel_file'] , '_blank');
-                      },
-                      error: function (xhr, ajaxOptions, thrownError) {
-                      }
-                  })
+                    };
+                    reader.readAsDataURL(input.files[0]);
+
+                    var formData = new FormData();
+                    formData.append('file', input.files[0]);
+
+                    // Send the formData in the AJAX request
+                    $.ajax({
+                    type: 'POST',
+                    url: 'http://127.0.0.1:5000/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
+                    data: formData, // Send the formData object
+                    processData: false,
+                    contentType: false,
+                    success: function(data) {
+                        window.open(data['excel_file'], '_blank');
+                    },
+                    error: function(xhr, ajaxOptions, thrownError) {
+                        // Handle error here
+                    }
+                });
                 } else {
-                  removeUpload();
+                    removeUpload();
                 }
             }
 
