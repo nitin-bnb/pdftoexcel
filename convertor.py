@@ -8,16 +8,11 @@ def convert(file, filename):
     if data:
         # Add column names to the DataFrame
         if filename == "Natwest":
-            df = readandcleandata(data)
-            df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Ledger Balance']  
-            processNetwest(df, filename)  
+            processNetwest(data, filename)
         elif filename == "LLoyds Bank":
-            df.columns = ['Date', 'Activity', 'Paid Out', 'Paid In', 'Balance']
             processLLoyds(file, filename)
         elif filename == "LLoyds Bank 2":
-            df = readandcleandata(data)
-            df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Balance']
-            processLLoyds2(df, filename)
+            processLLoyds2(data, filename)
         elif filename == "HSBC":
             df = readandcleandata(data)
             df.columns = ['Date', 'Description', 'Paid In', 'Paid Out', 'Balance']

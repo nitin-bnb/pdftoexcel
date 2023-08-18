@@ -34,7 +34,9 @@ def readandcleandata(data):
 
     return df_concatenated
 
-def processNetwest(df, filename):
+def processNetwest(data, filename):
+    df = readandcleandata(data)
+    df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Ledger Balance']
     date_pattern = r'^\d{2}/\d{2}/\d{4}$'
 
     # Filter rows based on the date pattern
@@ -145,7 +147,9 @@ def processLLoyds(file, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
-def processLLoyds2(df, filename):
+def processLLoyds2(data, filename):
+    df = readandcleandata(data)
+    df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Balance']
     date_pattern = r'^\d{2} \w{3} \d{2}$'
 
     # Filter rows based on the date pattern
