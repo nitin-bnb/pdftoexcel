@@ -136,11 +136,11 @@ def processLLoyds(file, filename):
     df = pd.DataFrame({"Date": dates,"Description":descriptions, "Paid Out": paid_out, "Paid In": paid_in})
 
     with pd.ExcelWriter(f"{filename}.xlsx", engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name={filename}, index=False)
+            df.to_excel(writer, sheet_name=f"{filename}", index=False)
 
             # Get the openpyxl workbook and worksheet objects
             writer.book
-            worksheet = writer.sheets["LL"]
+            worksheet = writer.sheets[f"{filename}"]
 
             # Iterate through each column and set the optimal width
             for column_cells in worksheet.columns:
