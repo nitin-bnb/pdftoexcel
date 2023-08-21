@@ -1,6 +1,3 @@
-import json
-import time
-import datetime
 import boto3
 from flask import Flask, render_template, request
 from dotenv import load_dotenv

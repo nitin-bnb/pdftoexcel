@@ -1,5 +1,4 @@
-import fitz
-import re
+import re, io, fitz
 import pandas as pd
 
 def remove_extra_headers(df):
@@ -65,7 +64,7 @@ def processLLoyds(file, filename):
     paid_out = []
     paid_in = []
 
-    doc = fitz.open(file)
+    doc = fitz.open(stream=io.BytesIO(file.read()), filetype="pdf")
     for page in doc:
         words += page.get_text("Date", sort=True)
 
