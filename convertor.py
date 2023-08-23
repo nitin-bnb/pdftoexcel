@@ -1,6 +1,6 @@
 import tabula
 import pandas as pd
-from utils import processNetwest, readandcleandata, processLLoyds, processLLoyds2, processHSBC
+from utils import processNetwest, readandcleandata, processLLoyds, processLLoyds2, processHSBC, processBarclays
 
 def convert(file, filename):
 
@@ -14,14 +14,8 @@ def convert(file, filename):
         data = tabula.read_pdf(file, stream=True, guess=True, pages='all', multiple_tables=True, pandas_options={'header': None})
         processLLoyds2(data, filename)
     elif filename == "HSBC":
-        data = tabula.read_pdf(file, stream=True, guess=True, pages='all', multiple_tables=True, pandas_options={'header': None})
-        df = readandcleandata(data)
-        df.columns = ['Date', 'Description', 'Paid In', 'Paid Out', 'Balance']
-        processHSBC(df, filename)
+        processHSBC(file, filename)
     else:
-        data = tabula.read_pdf(file, stream=True, guess=True, pages='all', multiple_tables=True, pandas_options={'header': None})
-        df = readandcleandata(data)
-        df = pd.concat(data, ignore_index=True)
-        df.columns = ['Date', 'Description', 'Paid In', 'Paid Out', 'Balance']
-  
+        # data = tabula.read_pdf(file, stream=True, guess=True, pages='all', multiple_tables=True, pandas_options={'header': None})
+        processBarclays(file,filename)
     return ''

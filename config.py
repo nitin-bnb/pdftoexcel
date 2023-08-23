@@ -8,3 +8,5 @@ class Config:
     AWS_S3_BUCKET = os.environ.get('AWS_S3_BUCKET', 'pdftoexcel')
     AWS_S3_DOMAIN = os.environ.get('AWS_S3_DOMAIN', 'https://ss-pdftoexcel.s3.ap-south-1.amazonaws.com')
     AWS_REGION = os.environ.get('AWS_REGION', 'ap-south-1')
+    PDF_FILE_PATH = os.environ.get('PDF_FILE_PATH','')
+    EXCEL_FILE_PATH = os.environ.get('EXCEL_FILE_PATH','')

@@ -1,10 +1,11 @@
 # import boto3
-from flask import Flask, render_template, request
-# from dotenv import load_dotenv
+import os
+from flask import Flask, render_template, request, send_file
+from dotenv import load_dotenv
 from convertor import convert
 
 # Load environment variables
-# load_dotenv()
+load_dotenv()
 
 # Create the Flask app
 app = Flask(__name__)
@@ -19,6 +20,7 @@ app.config.from_object('config.Config')
 #         aws_secret_access_key=app.config['AWS_SECRET_ACCESS_KEY']
 #     )
 
+upload_folder = app.config['PDF_FILE_PATH']
 
 @app.route('/')
 def home():
@@ -29,8 +31,21 @@ def pdftoexcel():
     if request.method == 'POST':
         file = request.files.get('file')
         if file:
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+            
+            # Save the file to the specified location
+            file_path = os.path.join(upload_folder, file.filename)
+            file.save(file_path)
+            
             filename = file.filename.replace('.pdf', '')
-            converted_file = convert(file, filename)
+            converted_file = convert(file_path, filename)
+            content_type = file.content_type
+
+        #     return send_file(file_path, attachment_filename=file.filename, mimetype=content_type)
+        # else:
+        #     return "No file found."
+
 
         #     time_stamp = time.time()
         #     current_date = datetime.datetime.now()
