@@ -1,10 +1,10 @@
-import boto3
+# import boto3
 from flask import Flask, render_template, request
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from convertor import convert
 
 # Load environment variables
-load_dotenv()
+# load_dotenv()
 
 # Create the Flask app
 app = Flask(__name__)
@@ -12,12 +12,12 @@ app = Flask(__name__)
 # Load configuration from config.py
 app.config.from_object('config.Config')
 
-s3 = boto3.resource(
-        's3',
-        region_name=app.config['AWS_REGION'],
-        aws_access_key_id=app.config['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=app.config['AWS_SECRET_ACCESS_KEY']
-    )
+# s3 = boto3.resource(
+#         's3',
+#         region_name=app.config['AWS_REGION'],
+#         aws_access_key_id=app.config['AWS_ACCESS_KEY_ID'],
+#         aws_secret_access_key=app.config['AWS_SECRET_ACCESS_KEY']
+#     )
 
 
 @app.route('/')
@@ -49,4 +49,4 @@ def pdftoexcel():
         return ''
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)    
+    app.run(host='0.0.0.0', port=5000, debug=True)

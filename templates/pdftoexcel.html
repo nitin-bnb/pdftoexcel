@@ -20,7 +20,7 @@
                     // Send the formData in the AJAX request
                     $.ajax({
                     type: 'POST',
-                    url: 'http://127.0.0.1:5000/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
+                    url: '/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
                     data: formData, // Send the formData object
                     processData: false,
                     contentType: false,

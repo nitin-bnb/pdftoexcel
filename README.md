@@ -12,6 +12,18 @@ pyenv virtualenv 3.9.0 pdftoexcel
 - pip install -r requirements.txt
 - FLASK_APP=pdftoexcel FLASK_ENV=development FLASK_DEBUG=1 flask run
 
+### server
+
+chmod 400 /Users/nitin/.ssh/bnb-ec2.pem
+
+ssh -i /Users/nitin/.ssh/bnb-ec2.pem ec2-user@3.84.246.34
+
+cd /srv/projects/pdftoexcel
+source ~/.bashrc
+pyenv activate pdftoexcel
+
+uwsgi --socket 0.0.0.0:5000 --protocol=http -w wsgi:app &
+
 ### deploy
 
 - python -m pip freeze > requirements.txt
@@ -19,12 +31,6 @@ pyenv virtualenv 3.9.0 pdftoexcel
 - zip -r pdftoexcel.zip /Users/nitin/.pyenv/versions/3.9.0/envs/pdftoexcel/lib/python3.9/site-packages
 
 - zip pdftoexcel.zip lambda_function.py
-
-aws configure
-
-export AWS_ACCESS_KEY_ID=AKIA3VHINVSYSOGK5OTY
-export AWS_SECRET_ACCESS_KEY=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
-export AWS_REGION=ap-south-1
 
 aws lambda list-functions
 
