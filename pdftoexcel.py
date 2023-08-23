@@ -8,7 +8,6 @@ load_dotenv()
 
 # Create the Flask app
 app = Flask(__name__)
-app.debug = True
 
 # Load configuration from config.py
 app.config.from_object('config.Config')
@@ -19,6 +18,7 @@ s3 = boto3.resource(
         aws_access_key_id=app.config['AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=app.config['AWS_SECRET_ACCESS_KEY']
     )
+
 
 @app.route('/')
 def home():
@@ -47,3 +47,6 @@ def pdftoexcel():
         #         'body': json.dumps('Failed to read PDF')
         #     }
         return ''
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)    
