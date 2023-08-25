@@ -24,6 +24,8 @@ pyenv activate pdftoexcel
 
 uwsgi --socket 0.0.0.0:5000 --protocol=http -w wsgi:app &
 
+http://ec2-3-84-246-34.compute-1.amazonaws.com:5000/
+
 ### deploy
 
 - python -m pip freeze > requirements.txt

@@ -1,8 +1,10 @@
-import os, re, fitz, camelot
+import re, fitz, camelot
 import pandas as pd
 from config import Config
+from flask import Response
 
 download_excel_path = Config.EXCEL_FILE_PATH
+
 
 def remove_extra_headers(df):
     header_row = df.iloc[0]
@@ -10,31 +12,20 @@ def remove_extra_headers(df):
         return df[df.index != 0].dropna(subset=[0], how='all')
     return df.dropna(subset=[0], how='all')
 
+
 def readandcleandata(data):
-
-# Assuming 'data' contains the extracted tables from each page
-# data is a list of DataFrames representing tables from each page
-# You can create a new list to store the cleaned dataframes after removing header rows.
-
     cleaned_data = []
-
-    # Loop through each DataFrame from the 'data' list
     for df in data:
-
-        # Remove rows with NaN values in the 'Date' column to get rid of headers
         df_cleaned = remove_extra_headers(df)
-        
-        # Assuming the header is present only on the first page, drop it from subsequent pages
         if len(cleaned_data) > 0:
             df_cleaned = df_cleaned.iloc[1:]
-        
-        # Append the cleaned DataFrame to the new list
+
         cleaned_data.append(df_cleaned)
 
-    # Concatenate all cleaned DataFrames into a single DataFrame
     df_concatenated = pd.concat(cleaned_data, ignore_index=True)
 
     return df_concatenated
+
 
 def processNetwest(data, filename):
     df = readandcleandata(data)
@@ -44,21 +35,22 @@ def processNetwest(data, filename):
     # Filter rows based on the date pattern
     valid_date_rows = df['Date'].str.match(date_pattern, na=False)
     df = df[valid_date_rows]
-
     df = df.drop(columns=['Ledger Balance'])
     df = df.drop(columns=['Type'])
-    with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name=f"{filename}", index=False)
 
-        # Get the openpyxl workbook and worksheet objects
-        workbook = writer.book
-        worksheet = writer.sheets[f"{filename}"]
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            workbook = writer.book
+            worksheet = writer.sheets[f"{filename}"]
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
-        # Iterate through each column and set the optimal width
-        for column_cells in worksheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
-    return df
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
+
 
 def processLLoyds(file, filename):
     words = ''
@@ -137,41 +129,43 @@ def processLLoyds(file, filename):
 
     df = pd.DataFrame({"Date": dates,"Description":descriptions, "Paid Out": paid_out, "Paid In": paid_in})
 
-    with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+                df.to_excel(writer, sheet_name=f"{filename}", index=False)
+                writer.book
+                worksheet = writer.sheets[f"{filename}"]
+                for column_cells in worksheet.columns:
+                    length = max(len(str(cell.value)) for cell in column_cells)
+                    worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
-            # Get the openpyxl workbook and worksheet objects
-            writer.book
-            worksheet = writer.sheets[f"{filename}"]
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
 
-            # Iterate through each column and set the optimal width
-            for column_cells in worksheet.columns:
-                length = max(len(str(cell.value)) for cell in column_cells)
-                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
 def processLLoyds2(data, filename):
     df = readandcleandata(data)
     df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Balance']
     date_pattern = r'^\d{2} \w{3} \d{2}$'
-
-    # Filter rows based on the date pattern
     valid_date_rows = df['Date'].str.match(date_pattern, na=False)
     df = df[valid_date_rows]
-
     df = df.drop(columns=['Balance'])
     df = df.drop(columns=['Type'])
-    with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name=f"{filename}", index=False)
 
-        # Get the openpyxl workbook and worksheet objects
-        writer.book
-        worksheet = writer.sheets[f"{filename}"]
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            writer.book
+            worksheet = writer.sheets[f"{filename}"]
 
-        # Iterate through each column and set the optimal width
-        for column_cells in worksheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
-    return df
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
+
 
 def processHSBC(file, filename):
     date_pattern = r"\d{2} \w{3} \d{2}"
@@ -190,8 +184,6 @@ def processHSBC(file, filename):
             structured_data = pd.concat([structured_data, parsed_df], ignore_index=True)
 
     structured_data = structured_data.drop(columns=3)
-
-    # Filtering rows based on specific details
     details_to_drop = ["BALANCE BROUGHT FORWARD", "BALANCE CARRIED FORWARD"]
     structured_data = structured_data[~structured_data[0].str.contains('|'.join(details_to_drop)) |
                                     (structured_data.index == 0) |
@@ -199,30 +191,33 @@ def processHSBC(file, filename):
 
     column_header = ['Details', 'Paid Out', 'Paid In']
     structured_data.columns = column_header
-
-    # Drop first three rows
     structured_data = structured_data.iloc[3:-1]
 
-    # Format Excel file
-    with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-        structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
-        writer.book
-        worksheet = writer.sheets[f"{filename}"]
-        date_column_header = "Date"
-        worksheet.insert_cols(0)
-        worksheet.cell(row=1, column=1, value=date_column_header)
-        for index, rows_cells in enumerate(worksheet.rows):
-            length = max(len(str(cell.value)) for cell in rows_cells)
-            worksheet.row_dimensions[rows_cells[1].row].height = length + 15
-            worksheet.row_dimensions[rows_cells[1].row].width = length + 15
-            matches = re.findall(date_pattern, str(rows_cells[1].value))
-            if matches:
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
+            writer.book
+            worksheet = writer.sheets[f"{filename}"]
+            date_column_header = "Date"
+            worksheet.insert_cols(0)
+            worksheet.cell(row=1, column=1, value=date_column_header)
+            for index, rows_cells in enumerate(worksheet.rows):
+                length = max(len(str(cell.value)) for cell in rows_cells)
+                worksheet.row_dimensions[rows_cells[1].row].height = length + 15
                 worksheet.row_dimensions[rows_cells[1].row].width = length + 15
-                rows_cells[1].value = rows_cells[1].value.replace(matches[0], "")
-                worksheet.cell(row=index + 1, column=1, value=matches[0])
-        for column_cells in worksheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+                matches = re.findall(date_pattern, str(rows_cells[1].value))
+                if matches:
+                    worksheet.row_dimensions[rows_cells[1].row].width = length + 15
+                    rows_cells[1].value = rows_cells[1].value.replace(matches[0], "")
+                    worksheet.cell(row=index + 1, column=1, value=matches[0])
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
+
 
 def processBarclays(data, filename):
     df = pd.concat(data, ignore_index=True)
@@ -230,15 +225,16 @@ def processBarclays(data, filename):
     df.drop(columns=['Balance'])
     df.drop(0, inplace=True)
 
-    with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name=f"{filename}", index=False)
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            writer.book
+            worksheet = writer.sheets[f"{filename}"]
 
-        # Get the openpyxl workbook and worksheet objects
-        writer.book
-        worksheet = writer.sheets[f"{filename}"]
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
-        # Iterate through each column and set the optimal width
-        for column_cells in worksheet.columns:
-            length = max(len(str(cell.value)) for cell in column_cells)
-            worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
-    return df
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
