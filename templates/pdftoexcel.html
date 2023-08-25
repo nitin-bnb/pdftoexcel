@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <script class="jsbin" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script type="text/javascript">
         function readURL(input) {
@@ -24,6 +25,15 @@
                     data: formData,
                     processData: false,
                     contentType: false,
+                    beforeSend: function () {
+                        $('.spinner-border').show();
+                        $('.success-message').hide();
+                        $('.error-message').hide();
+                    },
+
+                    complete: function () {
+                        $('.spinner-border').hide();
+                    },
                     success: function (data) {
                         if (data == '"Failed to Convert file to Excel"') {
                             $('.error-message').text(data);
@@ -220,8 +230,15 @@
                         class="file-title">Uploaded PDF</span></button>
             </div>
         </div>
-        <div class="error-message" style="color: red; display: none;"></div>
-        <div class="success-message" style="color: green; display: none;"></div>
+        <div class="text-center">
+            <div class="spinner-border" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <div class="text-center">
+            <div class="error-message" style="color: red; display: none;"></div>
+            <div class="success-message" style="color: green; display: none;"></div>
+        </div>
     </div>
 </body>
 
