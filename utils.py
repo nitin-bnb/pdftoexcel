@@ -2,6 +2,9 @@ import re, fitz, camelot
 import pandas as pd
 from config import Config
 from flask import Response
+from pdf2image import convert_from_path
+import pytesseract
+import openpyxl
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -235,6 +238,96 @@ def processBarclays(data, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
 
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
+
+
+def processHSBC_Scanned(data, filename):
+    Data_Objects = []
+    combined_list = []
+    formatted_list = []
+
+    def convert_pdf_to_text(pdf_path):
+        extracted_text = ''
+        # Convert PDF pages to images
+        images = convert_from_path(pdf_path, dpi=300)
+        # Perform OCR on each image
+        for img in images:
+            text = pytesseract.image_to_string(img)
+            extracted_text += text
+        return extracted_text
+
+    def convert_text_to_excel(extracted_text, excel_file_name):
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+
+        column_headers = ['Date', 'Type', 'Details', 'Paid Out', 'Paid In', 'Balance']
+        worksheet.append(column_headers)
+
+        lines = extracted_text.split('\n')
+
+        for index, line in enumerate(lines):
+            if line != '':
+                if index < len(lines) - 1 and bool(re.match(r'\d', line)):
+                    combined_string = line + ' ' + lines[index + 1]
+                    Data_Objects.append(combined_string)
+                else:
+                    Data_Objects.append(line)
+
+        i = 0
+        while i < len(Data_Objects) - 1:
+            combined_string = Data_Objects[i] + "" + Data_Objects[i + 1]
+            combined_list.append(combined_string)
+            i += 2  # Move to the next pair of strings
+
+        if len(Data_Objects) % 2 != 0:
+            combined_list.append(Data_Objects[-1])
+
+        for data in combined_list:
+            parts = data.split()
+            if parts[1] == 'DR' or parts[1] == 'BP':
+                if len(parts) == 7:
+                    formatted_data = [
+                        parts[0],
+                        parts[1],
+                        ' '.join(parts[2:-1]),
+                        parts[-1],
+                        '',
+                        '',
+                    ]
+                else:
+                    formatted_data = [
+                        parts[0],
+                        parts[1],
+                        ' '.join(parts[2:-2]),
+                        parts[-2],
+                        '',
+                        parts[-1],
+                    ]
+                formatted_list.append(formatted_data)
+            elif parts[1] == 'TFR':
+                formatted_data = [
+                    parts[0],
+                    parts[1],
+                    ' '.join(parts[2:-3]),
+                    '',
+                    ''.join(parts[-3:-1]),
+                    parts[-1],
+                ]
+                formatted_list.append(formatted_data)
+        for i in formatted_list:
+            worksheet.append(i)
+        workbook.save(excel_file_name)
+
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            column_headers.to_excel(writer, sheet_name=f"{filename}", index=False)
+            writer.book
+            worksheet = writer.sheets[f"{filename}"]
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
     except Exception as e:
         return Response(status=404)
