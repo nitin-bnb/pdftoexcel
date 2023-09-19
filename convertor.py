@@ -18,7 +18,7 @@ def convert(file, filename):
         data = tabula.read_pdf(file, stream=True, guess=True, pages='all', multiple_tables=True, pandas_options={'header': None})
         response = processBarclays(data,filename)
     elif filename == 'HSBC Scanned':
-        response = processHSBC_Scanned(data, filename)
+        response = processHSBC_Scanned(file , filename)
     else:
         return Response(status=404)
     return response

@@ -5,6 +5,8 @@ from flask import Response
 from pdf2image import convert_from_path
 import pytesseract
 import openpyxl
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows  # Import the function
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -243,91 +245,106 @@ def processBarclays(data, filename):
         return Response(status=404)
 
 
-def processHSBC_Scanned(data, filename):
+def processHSBC_Scanned(file, filename):
     Data_Objects = []
     combined_list = []
     formatted_list = []
 
-    def convert_pdf_to_text(pdf_path):
+    def convert_pdf_to_text(file):
         extracted_text = ''
         # Convert PDF pages to images
-        images = convert_from_path(pdf_path, dpi=300)
+        images = convert_from_path(file, dpi=300)
         # Perform OCR on each image
         for img in images:
             text = pytesseract.image_to_string(img)
             extracted_text += text
         return extracted_text
 
-    def convert_text_to_excel(extracted_text, excel_file_name):
-        workbook = openpyxl.Workbook()
-        worksheet = workbook.active
+    # Your existing PDF processing code
+    extracted_text = convert_pdf_to_text(file)
+    column_headers = ['Date', 'Type', 'Details', 'Paid Out', 'Paid In', 'Balance']
+    # Create a DataFrame to store the data
+    df = pd.DataFrame(columns=column_headers)
+    lines = extracted_text.split('\n')
 
-        column_headers = ['Date', 'Type', 'Details', 'Paid Out', 'Paid In', 'Balance']
-        worksheet.append(column_headers)
+    for index, line in enumerate(lines):
+        if line != '':
+            if index < len(lines) - 1 and bool(re.match(r'\d', line)):
+                combined_string = line + ' ' + lines[index + 1]
+                Data_Objects.append(combined_string)
+            else:
+                Data_Objects.append(line)
 
-        lines = extracted_text.split('\n')
+    i = 0
+    while i < len(Data_Objects) - 1:
+        combined_string = Data_Objects[i] + "" + Data_Objects[i + 1]
+        combined_list.append(combined_string)
+        i += 2  # Move to the next pair of strings
 
-        for index, line in enumerate(lines):
-            if line != '':
-                if index < len(lines) - 1 and bool(re.match(r'\d', line)):
-                    combined_string = line + ' ' + lines[index + 1]
-                    Data_Objects.append(combined_string)
-                else:
-                    Data_Objects.append(line)
+    if len(Data_Objects) % 2 != 0:
+        combined_list.append(Data_Objects[-1])
 
-        i = 0
-        while i < len(Data_Objects) - 1:
-            combined_string = Data_Objects[i] + "" + Data_Objects[i + 1]
-            combined_list.append(combined_string)
-            i += 2  # Move to the next pair of strings
-
-        if len(Data_Objects) % 2 != 0:
-            combined_list.append(Data_Objects[-1])
-
-        for data in combined_list:
-            parts = data.split()
-            if parts[1] == 'DR' or parts[1] == 'BP':
-                if len(parts) == 7:
-                    formatted_data = [
-                        parts[0],
-                        parts[1],
-                        ' '.join(parts[2:-1]),
-                        parts[-1],
-                        '',
-                        '',
-                    ]
-                else:
-                    formatted_data = [
-                        parts[0],
-                        parts[1],
-                        ' '.join(parts[2:-2]),
-                        parts[-2],
-                        '',
-                        parts[-1],
-                    ]
-                formatted_list.append(formatted_data)
-            elif parts[1] == 'TFR':
+    for data in combined_list:
+        parts = data.split()
+        if parts[1] == 'DR' or parts[1] == 'BP':
+            if len(parts) == 7:
                 formatted_data = [
                     parts[0],
                     parts[1],
-                    ' '.join(parts[2:-3]),
+                    ' '.join(parts[2:-1]),
+                    parts[-1],
                     '',
-                    ''.join(parts[-3:-1]),
+                    '',
+                ]
+            else:
+                formatted_data = [
+                    parts[0],
+                    parts[1],
+                    ' '.join(parts[2:-2]),
+                    parts[-2],
+                    '',
                     parts[-1],
                 ]
-                formatted_list.append(formatted_data)
-        for i in formatted_list:
-            worksheet.append(i)
-        workbook.save(excel_file_name)
+            formatted_list.append(formatted_data)
+        elif parts[1] == 'TFR':
+            formatted_data = [
+                parts[0],
+                parts[1],
+                ' '.join(parts[2:-3]),
+                '',
+                ''.join(parts[-3:-1]),
+                parts[-1],
+            ]
+            formatted_list.append(formatted_data)
+
+    # Add the formatted data to the DataFrame
+    for data in formatted_list:
+        df.loc[len(df)] = data
+
+    # Replace ":" with "." in all columns
+    df = df.apply(lambda x: x.str.replace(":", "."))
 
     try:
-        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-            column_headers.to_excel(writer, sheet_name=f"{filename}", index=False)
-            writer.book
-            worksheet = writer.sheets[f"{filename}"]
-            for column_cells in worksheet.columns:
-                length = max(len(str(cell.value)) for cell in column_cells)
-                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+        # Create a new Excel workbook
+        workbook = Workbook()
+        worksheet = workbook.active
+        # Convert the DataFrame to an Excel sheet
+        for row in dataframe_to_rows(df, index=False, header=True):
+            worksheet.append(row)
+        # Adjust column widths based on the content
+        for column_cells in worksheet.columns:
+            max_length = 0
+            column = column_cells[0].column_letter  # Get the column name
+            for cell in column_cells:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[column].width = adjusted_width
+        # Save the Excel file
+        workbook.save(f"{download_excel_path}{filename}.xlsx")
         return Response(status=201)
     except Exception as e:
         return Response(status=404)
