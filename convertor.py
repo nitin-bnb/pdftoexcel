@@ -1,5 +1,5 @@
 import tabula
-from utils import processNetwest, processLLoyds, processLLoyds2, processHSBC, processBarclays, processHSBC_Scanned
+from utils import processNetwest, processLLoyds, processLLoyds2, processHSBC, processBarclays, processHSBC_Scanned, processNatwest_Large_Scanned
 from flask import Response
 
 def convert(file, filename):
@@ -19,6 +19,8 @@ def convert(file, filename):
         response = processBarclays(data,filename)
     elif filename == 'HSBC Scanned':
         response = processHSBC_Scanned(file , filename)
+    elif filename == 'Natwest Large Scanned':
+        response = processNatwest_Large_Scanned(file, filename)
     else:
         return Response(status=404)
     return response

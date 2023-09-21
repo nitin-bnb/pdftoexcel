@@ -348,3 +348,118 @@ def processHSBC_Scanned(file, filename):
         return Response(status=201)
     except Exception as e:
         return Response(status=404)
+
+
+def processNatwest_Large_Scanned(file, filename):
+    rows_to_skip = {
+        1: (22, 7),
+        2: (7, 4),
+    }
+
+    def convert_pdf_to_text(file, rows_to_skip):
+        extracted_text = ''
+        page_number = 1
+        images = convert_from_path(file, dpi=300)
+
+        for img in images:
+            text = pytesseract.image_to_string(img)
+            lines = text.split('\n')
+            start_skip, end_skip = rows_to_skip.get(page_number, (0, 0))
+            lines = lines[start_skip:-end_skip] if end_skip > 0 else lines[start_skip:]
+            page_text = '\n'.join(lines)
+            extracted_text += page_text
+            page_number += 1
+        return extracted_text
+
+    def process_row(row):
+        date = ''
+        detail = ''
+        withdrawn = ''
+        paid_in = ''
+        balance = ''
+
+        all_words = row.split()
+        if len(all_words) > 1 and all_words[1][-1] == 'N':
+            all_words[0] = all_words[0] + all_words[1]
+            del all_words[1]
+            row = " ".join(all_words)
+
+        if all_words:
+            first_word = all_words[0]
+            if 'Bill Payment' in row:
+                date_detail_parts = row.split('Bill Payment', 1)
+                if len(date_detail_parts) == 2:
+                    date = date_detail_parts[0].strip()
+                    detail = 'Bill Payment ' + date_detail_parts[1].strip()
+                    date_match = re.search(r'\d{2}/\d{2}/\d{4}', date)
+                    if date_match:
+                        date = date_match.group()
+                    else:
+                        date = ''
+                else:
+                    detail = row
+            elif len(first_word) == 18:
+                row_items = re.split(r'\s+', row)
+                if len(row_items) >= 3:
+                    detail = row_items[0]
+                    withdrawn = row_items[1]
+                    balance = row_items[2]
+                else:
+                    detail = row
+            elif '.' in row:
+                floatItems = re.findall("\d+\.\d+", row)
+                for f in floatItems:
+                    row = row.replace(f, "")
+                row = row.strip()
+                detail = row
+                paid_in = floatItems[0]
+                balance = floatItems[1]
+            else:
+                date = ''
+                detail = row
+                paid_in = ''
+                balance = ''
+                withdrawn = ''
+        return date, detail, withdrawn, paid_in, balance
+
+    extracted_text = convert_pdf_to_text(file, rows_to_skip)
+
+    data = []
+    lines = extracted_text.split('\n')
+
+    for line in lines:
+        date, detail, withdrawn, paid_in, balance = process_row(line)
+        if any([date, detail, withdrawn, paid_in, balance]):
+            data.append([date, detail, withdrawn, paid_in, balance])
+
+    try:
+        df = pd.DataFrame(data)
+        workbook = Workbook()
+        sheet = workbook.active
+        # Add column headers
+        column_headers = ['Date', 'Details', 'Withdrawn', 'Paid In', 'Balance']
+        sheet.append(column_headers)
+
+        # Add data from the DataFrame to the worksheet
+        for row in dataframe_to_rows(df, index=False, header=False):
+            sheet.append(row)
+
+        # Adjust column widths based on the content
+        for column_cells in sheet.columns:
+            max_length = 0
+            column = column_cells[0].column_letter  # Get the column name
+            for cell in column_cells:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            sheet.column_dimensions[column].width = adjusted_width
+
+        df = f"{download_excel_path}{filename}.xlsx"
+        workbook.save(df)
+
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
