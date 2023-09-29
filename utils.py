@@ -31,18 +31,49 @@ def readandcleandata(data):
     return df_concatenated
 
 
-def processNatwest(data, filename):
-    df = readandcleandata(data)
-    df.columns = ['Date', 'Description', 'Type', 'Paid In', 'Paid Out', 'Ledger Balance']
+def processNatwest(file, filename):
     date_pattern = r'^\d{2}/\d{2}/\d{4}$'
-    valid_date_rows = df['Date'].str.match(date_pattern, na=False)
-    df = df[valid_date_rows]
-    df = df.drop(columns=['Ledger Balance'])
-    df = df.drop(columns=['Type'])
+    tables = camelot.read_pdf(file, pages="all", flavor="stream")
+    structured_data = pd.DataFrame()
+
+    for table in tables:
+        df = table.df
+        if 'Type' in df.columns:
+            type_mapping = {"BAC": "Paid In", "DPC": "Paid In", "EBP": "Paid Out"}
+            df['Paid In'] = df['Type'].map(type_mapping)
+            df['Paid Out'] = df['Type'].map(type_mapping)
+        structured_data = pd.concat([structured_data, df], ignore_index=True)
+
+    details_to_drop = [
+        "Statement for account 60-00-08 48716081 from 01/07/2021 to 02/09/2021",
+        "Date", "Narrative", "Debit", "Credit",
+        'Interest Rates: Your interest rate is 0.01% gross 0.01% AER. This is based on your balance from end of day yesterday.'
+    ]
+    structured_data = structured_data[~structured_data[structured_data.columns[0]].str.contains('|'.join(details_to_drop)) |
+                                    (structured_data.index == 0) |
+                                    (structured_data.index == len(structured_data) - 1)]
+
+    details_to_drop = ["CLOSING BALANCE", "BALANCE BROUGHT FORWARD", "BALANCE CARRIED FORWARD"]
+    structured_data = structured_data[~structured_data[1].str.contains('|'.join(details_to_drop)) |
+                                    (structured_data.index == 0) |
+                                    (structured_data.index == len(structured_data) - 1)]
+
+    rows_to_skip = list(range(35))
+    structured_data = structured_data.iloc[35:-1]
+    structured_data = structured_data.reset_index(drop=True)
+    structured_data.columns = ['Date', 'Description', "Type", 'Paid Out', 'Paid In', 'Balance', 'Extra']
+
+    if 'Balance' in structured_data.columns:
+        mask = ~structured_data['Balance'].str.endswith('Cr')
+        structured_data.loc[mask, 'Paid In'] = structured_data.loc[mask, 'Balance']
+        structured_data.loc[mask, 'Balance'] = ''
+    structured_data = structured_data.drop_duplicates()
+    columns_to_remove = ["Balance", "Extra"]
+    structured_data = structured_data.drop(columns_to_remove, axis=1)
 
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
             workbook = writer.book
             worksheet = writer.sheets[f"{filename}"]
             for column_cells in worksheet.columns:
@@ -230,15 +261,28 @@ def processHSBC(file, filename):
         return Response(status=404)
 
 
-def processBarclays(data, filename):
-    df = pd.concat(data, ignore_index=True)
-    df.columns = ['Date', 'Description', 'Paid In', 'Paid Out', 'Balance']
-    df.drop(columns=['Balance'])
-    df.drop(0, inplace=True)
+def processBarclays(file, filename):
+    tables = camelot.read_pdf(file, pages="all", flavor="stream")
+    structured_data = pd.DataFrame()
+
+    for table in tables:
+        df = table.df
+        if len((df.columns)) == 4:
+            structured_data = pd.concat([structured_data, df], ignore_index=True)
+        elif len((df.columns)) == 5:
+            parsed_df = df.copy()
+            parsed_df.columns = [0, 1, 2, 3, 4]
+            parsed_df = parsed_df.drop(columns=parsed_df.columns[4])
+            structured_data = pd.concat([structured_data, parsed_df], ignore_index=True)
+        elif len((df.columns)) == 7:
+            structured_data = pd.concat([structured_data, df], ignore_index=True)
+    column_header = ['Date', 'Description', 'Paid Out', 'Paid In', '', '', '']
+    structured_data.columns = column_header
+    structured_data = structured_data.iloc[3:]
 
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
             writer.book
             worksheet = writer.sheets[f"{filename}"]
             for column_cells in worksheet.columns:
@@ -572,4 +616,157 @@ def processNatwest_Small_Scanned(file, filename):
         return Response(status=404)
 
 
-# def processBarclays_Scanned(file, filename):
+def processBarclays_Scanned(file, filename):
+    def ends_with_C(value):
+        if len(value) > 0 and value[-1] == "C":
+            return True
+        else:
+            return False
+    unwanted_chars = ['lI', '{', 'l', 'I]', 'i', '\\', '\\]', '1]', 'if' , 'I' , ']' , 'f' , '}']
+    rows_to_skip = [
+        (20, 2),
+        (6, 3),
+    ]
+    def convert_pdf_to_text(file, rows_to_skip):
+        extracted_text = []
+        images = convert_from_path(file, dpi=300)
+        for i, img in enumerate(images, start=1):
+            rows_to_skip_start, rows_to_skip_end = rows_to_skip[i - 1]
+            text = pytesseract.image_to_string(img)
+            lines = text.split('\n')
+            lines = lines[rows_to_skip_start:]
+            lines = lines[:-rows_to_skip_end]
+            for line in lines:
+                columns = [col.strip() for col in line.split('|')]
+                columns = [col for col in columns if col]
+                if columns:
+                    extracted_text.append(columns)        
+        return extracted_text
+
+    extracted_text_list = convert_pdf_to_text(file, rows_to_skip)
+    details = []
+    payments = []
+    receipts = []
+    dates = []
+    statement_balance = []
+    clrd_for_interest = []
+
+    for line in extracted_text_list:
+        if len(line) >= 6:
+            details.append(line[0])
+            payments.append(line[1])
+            receipts.append(line[2])
+            dates.append(line[3])
+            statement_balance.append(line[4])
+            clrd_for_interest.append(line[5])
+        elif len(line) == 5:
+            details.append(line[0])
+            payments.append(line[1])
+            receipts.append(line[2])
+            dates.append(line[3])
+            statement_balance.append(line[4])
+            clrd_for_interest.append('')
+        elif len(line) == 4:
+            details.append(line[0])
+            payments.append(line[1])
+            receipts.append('')
+            dates.append(line[2])
+            statement_balance.append(line[3])
+            clrd_for_interest.append('')
+        elif len(line) == 3:
+            details.append(line[0])
+            payments.append(line[1])
+            receipts.append('')
+            dates.append('')
+            statement_balance.append(line[2])
+            clrd_for_interest.append('')
+        elif len(line) == 2:
+            details.append(line[0])
+            payments.append(line[1])
+            receipts.append('')
+            dates.append('')
+            statement_balance.append('')
+            clrd_for_interest.append('')
+        else:
+            details.append('')
+            payments.append('')
+            receipts.append('')
+            dates.append('')
+            statement_balance.append('')
+            clrd_for_interest.append('')
+
+    for i in range(len(payments)):
+        if ends_with_C(payments[i]):
+            receipts[i] = payments[i]
+            payments[i] = ''
+
+    for i in range(len(statement_balance)):
+        value = statement_balance[i]
+        if len(value) > 0 and "I]" in value:
+            parts = value.split("I]")
+            statement_balance[i] = parts[0]
+            clrd_for_interest[i] = parts[1]
+
+    for i in range(len(statement_balance)):
+        value = statement_balance[i]
+        if "II" in value:
+            parts = value.split("II")
+            statement_balance[i] = parts[0]
+            clrd_for_interest[i] = parts[1]
+
+    for i in range(len(statement_balance)):
+        value = statement_balance[i]
+        if "1]" in value:
+            parts = value.split("1]")
+            statement_balance[i] = parts[0]
+            clrd_for_interest[i] = parts[1]
+
+    for i in range(len(statement_balance)):
+        value = statement_balance[i]
+        if "I" in value:
+            parts = value.split("I")
+            statement_balance[i] = parts[0]
+            clrd_for_interest[i] = parts[1]
+
+    for i in range(len(statement_balance)):
+        value = statement_balance[i]
+        if re.match(r'(\d{1,2} [A-Z]{3} \d{2})', value):
+            dates[i] = statement_balance[i]
+            statement_balance[i] = ''
+
+    for i in range(len(receipts)):
+        value = receipts[i]
+        if re.match(r'(\d{1,2} [A-Z]{3} \d{2})', value):
+            clrd_for_interest[i] = statement_balance[i]
+            statement_balance[i] = dates[i]
+            dates[i] = receipts[i]
+            receipts[i] = ''
+
+    for i in range(len(details)):
+        details[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', details[i])
+        payments[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', payments[i])
+        receipts[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', receipts[i])
+        dates[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', dates[i])
+        statement_balance[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', statement_balance[i])
+        clrd_for_interest[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', clrd_for_interest[i])
+
+    df = pd.DataFrame({
+        "DETAILS": details,
+        "PAYMENTS": payments,
+        "RECEIPTS": receipts,
+        "DATE": dates,
+        "STATEMENT BALANCE": statement_balance,
+        "CLRD FOR INTEREST": clrd_for_interest,
+    })
+
+    try:
+        with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name=f"{filename}", index=False)
+            writer.book
+            worksheet = writer.sheets[f"{filename}"]
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+        return Response(status=201)
+    except Exception as e:
+        return Response(status=404)
