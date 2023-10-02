@@ -263,21 +263,21 @@ def processHSBC(file, filename):
 
 def processBarclays(file, filename):
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
-    structured_data = pd.DataFrame()
-
+    structured_data = pd.DataFrame(columns=['Date', 'Description', 'Paid Out', 'Paid In'])
     for table in tables:
-        df = table.df
-        if len((df.columns)) == 4:
-            structured_data = pd.concat([structured_data, df], ignore_index=True)
-        elif len((df.columns)) == 5:
-            parsed_df = df.copy()
-            parsed_df.columns = [0, 1, 2, 3, 4]
-            parsed_df = parsed_df.drop(columns=parsed_df.columns[4])
-            structured_data = pd.concat([structured_data, parsed_df], ignore_index=True)
-        elif len((df.columns)) == 7:
-            structured_data = pd.concat([structured_data, df], ignore_index=True)
-    column_header = ['Date', 'Description', 'Paid Out', 'Paid In', '', '', '']
-    structured_data.columns = column_header
+        if len(table.df.columns) >= 4:
+            if len(table.df.columns) == 7:
+                paid_out_idx, paid_in_idx = -3, -2
+            else:
+                paid_out_idx, paid_in_idx = -3, -2
+            data = {
+                'Date': table.df.iloc[:, 0],
+                'Description': table.df.iloc[:, 1],
+                'Paid Out': table.df.iloc[:, paid_out_idx],
+                'Paid In': table.df.iloc[:, paid_in_idx]
+            }
+            temp_df = pd.DataFrame(data)
+            structured_data = pd.concat([structured_data, temp_df], ignore_index=True)
     structured_data = structured_data.iloc[3:]
 
     try:
@@ -622,10 +622,10 @@ def processBarclays_Scanned(file, filename):
             return True
         else:
             return False
-    unwanted_chars = ['lI', '{', 'l', 'I]', 'i', '\\', '\\]', '1]', 'if' , 'I' , ']' , 'f' , '}']
+    unwanted_chars = ['lI', '{', 'l', 'I]', 'i', '\\', '\\]', '1]', 'if' , 'I' , ']' , 'f' , '}' ,'11' ,'——']
     rows_to_skip = [
         (20, 2),
-        (6, 3),
+        (8, 3),
     ]
     def convert_pdf_to_text(file, rows_to_skip):
         extracted_text = []
