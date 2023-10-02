@@ -8,7 +8,9 @@ import openpyxl
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 import PyPDF2
+import logging
 
+logger = logging.getLogger(__name__)
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -294,11 +296,13 @@ def processBarclays(file, filename):
 
 
 def processHSBC_Scanned(file, filename):
+    logger.info(f">>>>>>>>>> processHSBC_Scanned :{file}, {filename}")
     Data_Objects = []
     combined_list = []
     formatted_list = []
 
     def convert_pdf_to_text(file):
+        logger.info(f">>>>>>>>>> convert_pdf_to_text :{file}")
         extracted_text = ''
         images = convert_from_path(file, dpi=300)
         for img in images:
@@ -307,6 +311,7 @@ def processHSBC_Scanned(file, filename):
         return extracted_text
 
     extracted_text = convert_pdf_to_text(file)
+    logger.info(f">>>>>>>>>> extracted_text = convert_pdf_to_text :{file}")
     column_headers = ['Date', 'Type', 'Details', 'Paid Out', 'Paid In', 'Balance']
     df = pd.DataFrame(columns=column_headers)
     lines = extracted_text.split('\n')
