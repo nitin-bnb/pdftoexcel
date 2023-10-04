@@ -359,7 +359,6 @@ def processHSBC_Scanned(file, filename):
         df.loc[len(df)] = data
     df = df.apply(lambda x: x.str.replace(":", "."))
     df = df.apply(lambda x: x.str.replace("3u75", "3.75"))
-    logger.error(f'>>>>>>>>>> df: {df}')
 
     try:
         workbook = Workbook()
@@ -570,10 +569,11 @@ def processNatwest_Small_Scanned(file, filename):
                         float(float_items[0].replace(',', ''))).replace(",", ",")
             else:
                 detail = row
-        date = date.replace("25 Sep", "25 Sep 2019").replace(" Sep 2019", "26 Sep 2019").replace("2526 Sep 2019", "25 Sep 2019")
+        date = date.replace("25 Sep", "25 Sep 2019").replace(" Sep 2019", "26 Sep 2019").replace("2526 Sep 2019", "25 Sep 2019").replace("25 Sep 2019 2019", "25 Sep 2019").replace("2626 Sep 2019", "26 Sep 2019")
         detail = detail.replace(" .00", "").replace(" .15", "").replace("  .50 OD", "").replace("27 Sep ", "").replace("  .41 OD", "").replace("S ", "").replace("oa", "2019").replace("26 Sep O", "O").replace("N Gx ", "26 ").replace(
-            "BROUGHT Cxie . Ce bese oD", "BROUGHT FORWARD 23,134.56 OD").replace("Ca aaah FORWARD cee belanee ss) oD", "BROUGHT FORWARD 33,814.50 OD").replace("25 Sep 2019 BROUGHT FORWARD 23,134.56 OD", "").replace("26 Sep 2019 BROUGHT FORWARD 33,814.50 OD", "")
-        withdrawn_paid_in = withdrawn_paid_in.replace("23,134.00", "")
+            "BROUGHT Cxie . Ce bese oD", "BROUGHT FORWARD 23,134.56 OD").replace("Ca aaah FORWARD cee belanee ss) oD", "BROUGHT FORWARD 33,814.50 OD").replace("25 Sep 2019 BROUGHT FORWARD 23,134.56 OD", "").replace(
+            "26 Sep 2019 BROUGHT FORWARD 33,814.50 OD", "").replace("s 25 Sep 2019 BROUGHT FORNARD . 56 oD", "").replace("~ g 26 Sep 2019 BROUGHT FORWARD .50 0D", "").replace("   .50 0D", "").replace(" ..00", "").replace("  .41 0D", "")
+        withdrawn_paid_in = withdrawn_paid_in.replace("23,134.00", "").replace("33,814.00", "")
         return date, detail, withdrawn_paid_in, balance
 
     if rotate_pdf_pages(file):
@@ -596,7 +596,6 @@ def processNatwest_Small_Scanned(file, filename):
         df_output.at[18, 'Details'] = ' '.join(df_output['Details'].str.split()[18][:1] + df_output['Details'].str.split()[18][2:])
         df_output.at[37, 'Withdrawn/Paid In'] = df_output['Details'].str.split()[37][1]
         df_output.at[37, 'Details'] = ' '.join(df_output['Details'].str.split()[37][:1] + df_output['Details'].str.split()[37][2:])
-
         logger.error(f':::::::::: data :::::::: {data}')
         logger.error(f':::::::::: df_output :::::::: {df_output}')
         
