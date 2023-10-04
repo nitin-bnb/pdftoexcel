@@ -358,7 +358,7 @@ def processHSBC_Scanned(file, filename):
     for data in formatted_list:
         df.loc[len(df)] = data
     df = df.apply(lambda x: x.str.replace(":", "."))
-    logger.info(f'>>>>>>>>>> df: {df}')
+    logger.error(f'>>>>>>>>>> df: {df}')
 
     try:
         workbook = Workbook()
@@ -525,18 +525,18 @@ def processNatwest_Small_Scanned(file, filename):
 
         date_pattern = r'\b\d{2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b|\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b'
         date_match = re.search(date_pattern, row)
-        logger.info(f'>>>>>>>>>> date_match: {date_match}')
+        logger.error(f'>>>>>>>>>> date_match: {date_match}')
 
         if date_match:
             date = date_match.group()
-            logger.info(f'>>>>>>>>>> date: {date}')
+            logger.error(f'>>>>>>>>>> date: {date}')
         all_words = row.split()
-        logger.info(f'>>>>>>>>>> all_words: {all_words}')
+        logger.error(f'>>>>>>>>>> all_words: {all_words}')
         items = row.split()
-        logger.info(f'>>>>>>>>>> items: {items}')
+        logger.error(f'>>>>>>>>>> items: {items}')
         if items and "OD" in items[-1]:
             balance = items[-2] + ' ' + items[-1]
-            logger.info(f'>>>>>>>>>> balance: {balance}')
+            logger.error(f'>>>>>>>>>> balance: {balance}')
 
         if all_words:
             if BILL_PAYMENT in row:
