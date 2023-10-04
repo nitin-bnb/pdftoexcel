@@ -358,6 +358,7 @@ def processHSBC_Scanned(file, filename):
     for data in formatted_list:
         df.loc[len(df)] = data
     df = df.apply(lambda x: x.str.replace(":", "."))
+    df = df.apply(lambda x: x.str.replace("3u75", "3.75"))
     logger.error(f'>>>>>>>>>> df: {df}')
 
     try:
