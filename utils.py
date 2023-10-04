@@ -516,8 +516,8 @@ def processNatwest_Small_Scanned(file, filename):
             formatted_text.extend(formatted_lines)
         df = pd.DataFrame(formatted_text, columns=['Text'])
         return df
-
     def process_row(row):
+        logger.error(f':::::::::: row :::::::: {row}')
         date = ''
         detail = ''
         withdrawn_paid_in = ''
@@ -596,9 +596,10 @@ def processNatwest_Small_Scanned(file, filename):
         df_output.at[18, 'Details'] = ' '.join(df_output['Details'].str.split()[18][:1] + df_output['Details'].str.split()[18][2:])
         df_output.at[37, 'Withdrawn/Paid In'] = df_output['Details'].str.split()[37][1]
         df_output.at[37, 'Details'] = ' '.join(df_output['Details'].str.split()[37][:1] + df_output['Details'].str.split()[37][2:])
+
         logger.error(f':::::::::: data :::::::: {data}')
         logger.error(f':::::::::: df_output :::::::: {df_output}')
-        
+
         try:
             with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
                 df_output.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -638,7 +639,7 @@ def processBarclays_Scanned(file, filename):
                 columns = [col.strip() for col in line.split('|')]
                 columns = [col for col in columns if col]
                 if columns:
-                    extracted_text.append(columns)        
+                    extracted_text.append(columns)
         return extracted_text
 
     extracted_text_list = convert_pdf_to_text(file, rows_to_skip)
