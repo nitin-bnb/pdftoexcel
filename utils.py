@@ -6,6 +6,9 @@ from pdf2image import convert_from_path
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+import logging
+logger = logging.getLogger(__name__)
+
 download_excel_path = Config.EXCEL_FILE_PATH
 
 
@@ -355,6 +358,7 @@ def processHSBC_Scanned(file, filename):
     for data in formatted_list:
         df.loc[len(df)] = data
     df = df.apply(lambda x: x.str.replace(":", "."))
+    logger.info(f'>>>>>>>>>> df: {df}')
 
     try:
         workbook = Workbook()
@@ -521,13 +525,18 @@ def processNatwest_Small_Scanned(file, filename):
 
         date_pattern = r'\b\d{2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b|\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b'
         date_match = re.search(date_pattern, row)
+        logger.info(f'>>>>>>>>>> date_match: {date_match}')
 
         if date_match:
             date = date_match.group()
+            logger.info(f'>>>>>>>>>> date: {date}')
         all_words = row.split()
+        logger.info(f'>>>>>>>>>> all_words: {all_words}')
         items = row.split()
+        logger.info(f'>>>>>>>>>> items: {items}')
         if items and "OD" in items[-1]:
             balance = items[-2] + ' ' + items[-1]
+            logger.info(f'>>>>>>>>>> balance: {balance}')
 
         if all_words:
             if BILL_PAYMENT in row:
