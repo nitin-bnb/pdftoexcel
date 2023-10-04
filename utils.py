@@ -517,7 +517,6 @@ def processNatwest_Small_Scanned(file, filename):
         df = pd.DataFrame(formatted_text, columns=['Text'])
         return df
     def process_row(row):
-        logger.error(f':::::::::: row :::::::: {row}')
         date = ''
         detail = ''
         withdrawn_paid_in = ''
@@ -532,9 +531,7 @@ def processNatwest_Small_Scanned(file, filename):
         all_words = row.split()
         items = row.split()
         logger.error(f'>>>>>>>>>> items: {items}')
-        # if items and "OD" in items[-1]:
-        #     balance = items[-2] + ' ' + items[-1]
-        if items and items[-1].endswith("OD"):
+        if items and "OD" in items[-1]:
             balance = items[-2] + ' ' + items[-1]
             logger.error(f'>>>>>>>>>> balance: {balance}')
 
