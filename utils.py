@@ -1,16 +1,10 @@
-import re, fitz, camelot
+import re, fitz, camelot, pytesseract, PyPDF2
 import pandas as pd
 from config import Config
 from flask import Response
 from pdf2image import convert_from_path
-import pytesseract
-import openpyxl
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
-import PyPDF2
-import logging
-
-logger = logging.getLogger(__name__)
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -34,7 +28,6 @@ def readandcleandata(data):
 
 
 def processNatwest(file, filename):
-    date_pattern = r'^\d{2}/\d{2}/\d{4}$'
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
     structured_data = pd.DataFrame()
 
@@ -46,11 +39,8 @@ def processNatwest(file, filename):
             df['Paid Out'] = df['Type'].map(type_mapping)
         structured_data = pd.concat([structured_data, df], ignore_index=True)
 
-    details_to_drop = [
-        "Statement for account 60-00-08 48716081 from 01/07/2021 to 02/09/2021",
-        "Date", "Narrative", "Debit", "Credit",
-        'Interest Rates: Your interest rate is 0.01% gross 0.01% AER. This is based on your balance from end of day yesterday.'
-    ]
+    details_to_drop = ["Statement for account 60-00-08 48716081 from 01/07/2021 to 02/09/2021", "Date", "Narrative", "Debit", "Credit",
+        'Interest Rates: Your interest rate is 0.01% gross 0.01% AER. This is based on your balance from end of day yesterday.']
     structured_data = structured_data[~structured_data[structured_data.columns[0]].str.contains('|'.join(details_to_drop)) |
                                     (structured_data.index == 0) |
                                     (structured_data.index == len(structured_data) - 1)]
@@ -60,7 +50,6 @@ def processNatwest(file, filename):
                                     (structured_data.index == 0) |
                                     (structured_data.index == len(structured_data) - 1)]
 
-    rows_to_skip = list(range(35))
     structured_data = structured_data.iloc[35:-1]
     structured_data = structured_data.reset_index(drop=True)
     structured_data.columns = ['Date', 'Description', "Type", 'Paid Out', 'Paid In', 'Balance', 'Extra']
@@ -76,13 +65,13 @@ def processNatwest(file, filename):
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
-            workbook = writer.book
+            writer.book
             worksheet = writer.sheets[f"{filename}"]
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -170,7 +159,7 @@ def processLLoyds(file, filename):
                     length = max(len(str(cell.value)) for cell in column_cells)
                     worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -208,7 +197,7 @@ def processLLoyds2(file, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -259,7 +248,7 @@ def processHSBC(file, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -291,18 +280,16 @@ def processBarclays(file, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
 def processHSBC_Scanned(file, filename):
-    logger.info(f">>>>>>>>>> processHSBC_Scanned :{file}, {filename}")
     Data_Objects = []
     combined_list = []
     formatted_list = []
 
     def convert_pdf_to_text(file):
-        logger.info(f">>>>>>>>>> convert_pdf_to_text :{file}")
         extracted_text = ''
         images = convert_from_path(file, dpi=300)
         for img in images:
@@ -311,7 +298,6 @@ def processHSBC_Scanned(file, filename):
         return extracted_text
 
     extracted_text = convert_pdf_to_text(file)
-    logger.info(f">>>>>>>>>> extracted_text = convert_pdf_to_text :{file}")
     column_headers = ['Date', 'Type', 'Details', 'Paid Out', 'Paid In', 'Balance']
     df = pd.DataFrame(columns=column_headers)
     lines = extracted_text.split('\n')
@@ -388,7 +374,7 @@ def processHSBC_Scanned(file, filename):
             worksheet.column_dimensions[column].width = adjusted_width
         workbook.save(f"{download_excel_path}{filename}.xlsx")
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -492,7 +478,7 @@ def processNatwest_Large_Scanned(file, filename):
         df = f"{download_excel_path}{filename}.xlsx"
         workbook.save(df)
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)
 
 
@@ -513,8 +499,7 @@ def processNatwest_Small_Scanned(file, filename):
             with open(file, 'wb') as pdf_out:
                 pdf_writer.write(pdf_out)
             return True
-        except Exception as e:
-            print(f"Error rotating PDF: {str(e)}")
+        except Exception:
             return False
 
     def convert_pdf_to_dataframe(file):
@@ -539,8 +524,6 @@ def processNatwest_Small_Scanned(file, filename):
 
         if date_match:
             date = date_match.group()
-            rest_of_text = row.replace(date, '', 1).strip()
-
         all_words = row.split()
         items = row.split()
         if items and "OD" in items[-1]:
@@ -615,7 +598,7 @@ def processNatwest_Small_Scanned(file, filename):
                     length = max(len(str(cell.value)) for cell in column_cells)
                     worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
             return Response(status=201)
-        except Exception as e:
+        except Exception:
             return Response(status=404)
     else:
         return Response(status=404)
@@ -773,5 +756,5 @@ def processBarclays_Scanned(file, filename):
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
         return Response(status=201)
-    except Exception as e:
+    except Exception:
         return Response(status=404)

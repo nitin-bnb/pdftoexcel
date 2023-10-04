@@ -1,4 +1,3 @@
-import tabula
 from utils import processNatwest, processLLoyds, processLLoyds2, processHSBC, processBarclays, processHSBC_Scanned, processNatwest_Large_Scanned, processNatwest_Small_Scanned, processBarclays_Scanned
 from flask import Response
 
@@ -13,15 +12,13 @@ def convert(file, filename):
     elif filename == "HSBC":
         response = processHSBC(file, filename)
     elif filename == 'Barclays Bank':
-        response = processBarclays(file,filename)
+        response = processBarclays(file, filename)
     elif filename == 'HSBC Scanned':
-        response = processHSBC_Scanned(file , filename)
+        response = processHSBC_Scanned(file, filename)
     elif filename == 'Natwest Large Scanned':
         response = processNatwest_Large_Scanned(file, filename)
     elif filename == 'Natwest Small Scanned':
-        print(">>>>>>>>>> filename", filename)
         response = processNatwest_Small_Scanned(file, filename)
-        print(">>>>>> response", response)
     elif filename == 'Barclays Bank Scanned':
         response = processBarclays_Scanned(file, filename)
     else:

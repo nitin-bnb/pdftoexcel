@@ -22,7 +22,7 @@
 
                 $.ajax({
                     type: 'POST',
-                    url: '/default/pdftoexcel', // production: https://7dvn2mrkf9.execute-api.ap-south-1.amazonaws.com/default/pdftoexcel
+                    url: '/default/pdftoexcel',
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -67,8 +67,6 @@
                         }, 2000);
                     }
                 });
-            } else {
-                // removeUpload();
             }
         }
 
@@ -234,11 +232,6 @@
             </div>
         </div>
         <div class="file-upload-content"><br>
-            <!-- <img class="file-upload-file" src="#" alt="your file" /> -->
-            <!-- <div class="file-title-wrap">
-                <button type="button" onclick="removeUpload()" class="remove-file">Remove <span
-                        class="file-title">Uploaded PDF</span></button>
-            </div> -->
         </div>
         <div class="text-center">
             <div class="spinner-border" style="display: none;">
