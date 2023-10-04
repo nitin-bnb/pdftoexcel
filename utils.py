@@ -532,7 +532,9 @@ def processNatwest_Small_Scanned(file, filename):
         all_words = row.split()
         items = row.split()
         logger.error(f'>>>>>>>>>> items: {items}')
-        if items and "OD" in items[-1]:
+        # if items and "OD" in items[-1]:
+        #     balance = items[-2] + ' ' + items[-1]
+        if items and items[-1].endswith("OD"):
             balance = items[-2] + ' ' + items[-1]
             logger.error(f'>>>>>>>>>> balance: {balance}')
 
