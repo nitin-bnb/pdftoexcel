@@ -524,6 +524,7 @@ def processNatwest_Small_Scanned(file, filename):
 
         if date_match:
             date = date_match.group()
+            rest_of_text = row.replace(date, '', 1).strip()
         all_words = row.split()
         items = row.split()
         if items and "OD" in items[-1]:
