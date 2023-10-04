@@ -39,9 +39,9 @@
                         if (data == 'Failed to Convert file to Excel') {
                             $('.error-message').text('Invalid Format');
                             $('.error-message').show();
-                            //setTimeout(function () {
-                            //    location.reload();
-                            //}, 2000);
+                            setTimeout(function () {
+                                location.reload();
+                            }, 2000);
                         }
                         else {
                             var downloadUrl = '/static/' + data + '.xlsx';
@@ -54,17 +54,17 @@
 
                             $('.success-message').text('Conversion to Excel was successful.');
                             $('.success-message').show();
-                            //setTimeout(function () {
-                            //    location.reload();
-                            //}, 2000);
+                            setTimeout(function () {
+                                location.reload();
+                            }, 2000);
                         }
                     },
                     error: function (xhr, ajaxOptions, thrownError) {
                         $('.error-message').text('Invalid Format');
                         $('.error-message').show();
-                        //setTimeout(function () {
-                        //    location.reload();
-                        //}, 2000);
+                        setTimeout(function () {
+                            location.reload();
+                        }, 2000);
                     }
                 });
             }

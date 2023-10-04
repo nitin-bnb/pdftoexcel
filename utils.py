@@ -529,9 +529,7 @@ def processNatwest_Small_Scanned(file, filename):
 
         if date_match:
             date = date_match.group()
-            logger.error(f'>>>>>>>>>> date: {date}')
         all_words = row.split()
-        logger.error(f'>>>>>>>>>> all_words: {all_words}')
         items = row.split()
         logger.error(f'>>>>>>>>>> items: {items}')
         if items and "OD" in items[-1]:
@@ -572,9 +570,12 @@ def processNatwest_Small_Scanned(file, filename):
             else:
                 detail = row
         date = date.replace("25 Sep", "25 Sep 2019").replace(" Sep 2019", "26 Sep 2019").replace("2526 Sep 2019", "25 Sep 2019")
+        logger.error(f':::::::::: date : >>>>>> {date}')
         detail = detail.replace(" .00", "").replace(" .15", "").replace("  .50 OD", "").replace("27 Sep ", "").replace("  .41 OD", "").replace("S ", "").replace("oa", "2019").replace("26 Sep O", "O").replace("N Gx ", "26 ").replace(
             "BROUGHT Cxie . Ce bese oD", "BROUGHT FORWARD 23,134.56 OD").replace("Ca aaah FORWARD cee belanee ss) oD", "BROUGHT FORWARD 33,814.50 OD").replace("25 Sep 2019 BROUGHT FORWARD 23,134.56 OD", "").replace("26 Sep 2019 BROUGHT FORWARD 33,814.50 OD", "")
+        logger.error(f':::::::::: detail : >>>>>> {detail}')
         withdrawn_paid_in = withdrawn_paid_in.replace("23,134.00", "")
+        logger.error(f':::::::::: withdrawn_paid_in : >>>>>> {withdrawn_paid_in}')
         return date, detail, withdrawn_paid_in, balance
 
     if rotate_pdf_pages(file):
