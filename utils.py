@@ -6,8 +6,6 @@ from pdf2image import convert_from_path
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-import logging
-logger = logging.getLogger(__name__)
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -520,20 +518,13 @@ def processNatwest_Small_Scanned(file, filename):
         date = ''
         detail = ''
         withdrawn_paid_in = ''
-        balance = ''
 
         date_pattern = r'\b\d{2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b|\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\b'
         date_match = re.search(date_pattern, row)
-        logger.error(f'>>>>>>>>>> date_match: {date_match}')
 
         if date_match:
             date = date_match.group()
         all_words = row.split()
-        items = row.split()
-        logger.error(f'>>>>>>>>>> items: {items}')
-        if items and "OD" in items[-1]:
-            balance = items[-2] + ' ' + items[-1]
-            logger.error(f'>>>>>>>>>> balance: {balance}')
 
         if all_words:
             if BILL_PAYMENT in row:
@@ -573,7 +564,7 @@ def processNatwest_Small_Scanned(file, filename):
             "BROUGHT Cxie . Ce bese oD", "BROUGHT FORWARD 23,134.56 OD").replace("Ca aaah FORWARD cee belanee ss) oD", "BROUGHT FORWARD 33,814.50 OD").replace("25 Sep 2019 BROUGHT FORWARD 23,134.56 OD", "").replace(
             "26 Sep 2019 BROUGHT FORWARD 33,814.50 OD", "").replace("s 25 Sep 2019 BROUGHT FORNARD . 56 oD", "").replace("~ g 26 Sep 2019 BROUGHT FORWARD .50 0D", "").replace("   .50 0D", "").replace(" ..00", "").replace("  .41 0D", "")
         withdrawn_paid_in = withdrawn_paid_in.replace("23,134.00", "").replace("33,814.00", "")
-        return date, detail, withdrawn_paid_in, balance
+        return date, detail, withdrawn_paid_in
 
     if rotate_pdf_pages(file):
         df = convert_pdf_to_dataframe(file)
@@ -582,9 +573,9 @@ def processNatwest_Small_Scanned(file, filename):
 
         data = []
         for row in df['Text']:
-            date, detail, withdrawn_paid_in, balance = process_row(row)
-            data.append([date, detail, withdrawn_paid_in, balance])
-        columns = ["Date", "Details", "Withdrawn/Paid In", "Balance"]
+            date, detail, withdrawn_paid_in = process_row(row)
+            data.append([date, detail, withdrawn_paid_in])
+        columns = ["Date", "Details", "Withdrawn/Paid In"]
         df_output = pd.DataFrame(data, columns=columns)
 
         details_to_drop = ["CARRIED FORWARD"]
@@ -595,9 +586,6 @@ def processNatwest_Small_Scanned(file, filename):
         df_output.at[18, 'Details'] = ' '.join(df_output['Details'].str.split()[18][:1] + df_output['Details'].str.split()[18][2:])
         df_output.at[37, 'Withdrawn/Paid In'] = df_output['Details'].str.split()[37][1]
         df_output.at[37, 'Details'] = ' '.join(df_output['Details'].str.split()[37][:1] + df_output['Details'].str.split()[37][2:])
-
-        logger.error(f':::::::::: data :::::::: {data}')
-        logger.error(f':::::::::: df_output :::::::: {df_output}')
 
         try:
             with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
