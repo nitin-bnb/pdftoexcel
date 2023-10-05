@@ -6,6 +6,8 @@ from pdf2image import convert_from_path
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+import logging
+logger = logging.getLogger(__name__)
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -730,11 +732,17 @@ def processBarclays_Scanned(file, filename):
 
     for i in range(len(details)):
         details[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', details[i])
+        logger.error(f'>>>>> details >>>>>>>>>>>>>>> {details}')
         payments[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', payments[i])
+        logger.error(f'>>>>> payments >>>>>>>>>>>>>> {payments}')
         receipts[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', receipts[i])
+        logger.error(f'>>>>> receipts >>>>>>>>>>>>>> {receipts}')
         dates[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', dates[i])
+        logger.error(f'>>>>> dates >>>>>>>>>>>>>>>>> {dates}')
         statement_balance[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', statement_balance[i])
+        logger.error(f'>>>>> statement_balance >>>>> {statement_balance}')
         clrd_for_interest[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', clrd_for_interest[i])
+        logger.error(f'>>>>> clrd_for_interest >>>>> {clrd_for_interest}')
 
     df = pd.DataFrame({
         "DETAILS": details,
