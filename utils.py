@@ -1,4 +1,4 @@
-import re, fitz, camelot, pytesseract, PyPDF2
+import re, fitz, camelot, pytesseract, PyPDF2, logging
 import pandas as pd
 from config import Config
 from flask import Response
@@ -6,8 +6,9 @@ from pdf2image import convert_from_path
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-import logging
+
 logger = logging.getLogger(__name__)
+
 
 download_excel_path = Config.EXCEL_FILE_PATH
 
@@ -31,6 +32,8 @@ def readandcleandata(data):
 
 
 def processNatwest(file, filename):
+    logger.error(f"<<<<<<<<<< Natwest Bank PDF >>>>>>>>>> {file}")
+
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
     structured_data = pd.DataFrame()
 
@@ -65,6 +68,8 @@ def processNatwest(file, filename):
     columns_to_remove = ["Balance", "Extra"]
     structured_data = structured_data.drop(columns_to_remove, axis=1)
 
+    logger.error(f"<<<<<<<<<< processNatwest structured_data >>>>>>>>>> {structured_data}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -73,12 +78,17 @@ def processNatwest(file, filename):
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processLLoyds(file, filename):
+    logger.error(f"<<<<<<<<<< LLoyds Bank PDF >>>>>>>>>> {file}")
+
     words = ''
     dates = []
     descriptions = []
@@ -153,6 +163,8 @@ def processLLoyds(file, filename):
                 paid_in.append(data[3])
     df = pd.DataFrame({"Date": dates,"Description":descriptions, "Paid Out": paid_out, "Paid In": paid_in})
 
+    logger.error(f"<<<<<<<<<< processLLoyds df >>>>>>>>>> {df}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
                 df.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -161,12 +173,17 @@ def processLLoyds(file, filename):
                 for column_cells in worksheet.columns:
                     length = max(len(str(cell.value)) for cell in column_cells)
                     worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processLLoyds2(file, filename):
+    logger.error(f"<<<<<<<<<< LLoyds Bank 2 PDF >>>>>>>>>> {file}")
+
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
     structured_data = pd.DataFrame()
     for table in tables:
@@ -191,6 +208,8 @@ def processLLoyds2(file, filename):
     replace_dict = {"21220.00": "", "15500.00": ""}
     structured_data["Paid In"] = structured_data["Paid In"].replace(replace_dict)
 
+    logger.error(f"<<<<<<<<<< processLLoyds2 structured_data >>>>>>>>>> {structured_data}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -199,12 +218,17 @@ def processLLoyds2(file, filename):
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processHSBC(file, filename):
+    logger.error(f"<<<<<<<<<< HSBC Bank PDF >>>>>>>>>> {file}")
+
     date_pattern = r"\d{2} \w{3} \d{2}"
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
     structured_data = pd.DataFrame()
@@ -230,6 +254,8 @@ def processHSBC(file, filename):
     structured_data.columns = column_header
     structured_data = structured_data.iloc[3:-1]
 
+    logger.error(f"<<<<<<<<<< processHSBC structured_data >>>>>>>>>> {structured_data}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -250,12 +276,17 @@ def processHSBC(file, filename):
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processBarclays(file, filename):
+    logger.error(f"<<<<<<<<<< Barclays Bank PDF >>>>>>>>>> {file}")
+
     tables = camelot.read_pdf(file, pages="all", flavor="stream")
     structured_data = pd.DataFrame(columns=['Date', 'Description', 'Paid Out', 'Paid In'])
     for table in tables:
@@ -274,6 +305,8 @@ def processBarclays(file, filename):
             structured_data = pd.concat([structured_data, temp_df], ignore_index=True)
     structured_data = structured_data.iloc[3:]
 
+    logger.error(f"<<<<<<<<<< processBarclays structured_data >>>>>>>>>> {structured_data}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             structured_data.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -282,12 +315,17 @@ def processBarclays(file, filename):
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processHSBC_Scanned(file, filename):
+    logger.error(f"<<<<<<<<<< HSBC Scanned PDF >>>>>>>>>> {file}")
+
     Data_Objects = []
     combined_list = []
     formatted_list = []
@@ -360,6 +398,8 @@ def processHSBC_Scanned(file, filename):
     df = df.apply(lambda x: x.str.replace(":", "."))
     df = df.apply(lambda x: x.str.replace("3u75", "3.75"))
 
+    logger.error(f"<<<<<<<<<< processHSBC_Scanned df >>>>>>>>>> {df}")
+
     try:
         workbook = Workbook()
         worksheet = workbook.active
@@ -377,12 +417,17 @@ def processHSBC_Scanned(file, filename):
             adjusted_width = (max_length + 2)
             worksheet.column_dimensions[column].width = adjusted_width
         workbook.save(f"{download_excel_path}{filename}.xlsx")
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processNatwest_Large_Scanned(file, filename):
+    logger.error(f"<<<<<<<<<< Natwest Large Scanned PDF >>>>>>>>>> {file}")
+
     rows_to_skip = {
         1: (22, 7),
         2: (7, 4),
@@ -462,6 +507,9 @@ def processNatwest_Large_Scanned(file, filename):
 
     try:
         df = pd.DataFrame(data)
+
+        logger.error(f"<<<<<<<<<< processNatwest_Large_Scanned df >>>>>>>>>> {df}")
+
         workbook = Workbook()
         sheet = workbook.active
         column_headers = ['Date', 'Details', 'Withdrawn', 'Paid In', 'Balance']
@@ -481,12 +529,17 @@ def processNatwest_Large_Scanned(file, filename):
             sheet.column_dimensions[column].width = adjusted_width
         df = f"{download_excel_path}{filename}.xlsx"
         workbook.save(df)
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
 
 
 def processNatwest_Small_Scanned(file, filename):
+    logger.error(f"<<<<<<<<<< Natwest Small Scanned PDF >>>>>>>>>> {file}")
+
     BILL_PAYMENT = "Bill Payment"
     DIRECT_DEBIT = "Direct Debit"
     ONLINE_TRANSACTION = "OnLine Transaction"
@@ -589,6 +642,8 @@ def processNatwest_Small_Scanned(file, filename):
         df_output.at[37, 'Withdrawn/Paid In'] = df_output['Details'].str.split()[37][1]
         df_output.at[37, 'Details'] = ' '.join(df_output['Details'].str.split()[37][:1] + df_output['Details'].str.split()[37][2:])
 
+        logger.error(f"<<<<<<<<<< processNatwest_Small_Scanned df_output >>>>>>>>>> {df_output}")
+
         try:
             with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
                 df_output.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -597,6 +652,9 @@ def processNatwest_Small_Scanned(file, filename):
                 for column_cells in worksheet.columns:
                     length = max(len(str(cell.value)) for cell in column_cells)
                     worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+            logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
             return Response(status=201)
         except Exception:
             return Response(status=404)
@@ -605,6 +663,8 @@ def processNatwest_Small_Scanned(file, filename):
 
 
 def processBarclays_Scanned(file, filename):
+    logger.error(f"<<<<<<<<<< Barclays Scanned PDF >>>>>>>>>> {file}")
+
     def ends_with_C(value):
         if len(value) > 0 and value[-1] == "C":
             return True
@@ -732,17 +792,11 @@ def processBarclays_Scanned(file, filename):
 
     for i in range(len(details)):
         details[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', details[i])
-        logger.error(f'>>>>> details >>>>>>>>>>>>>>> {details}')
         payments[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', payments[i])
-        logger.error(f'>>>>> payments >>>>>>>>>>>>>> {payments}')
         receipts[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', receipts[i])
-        logger.error(f'>>>>> receipts >>>>>>>>>>>>>> {receipts}')
         dates[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', dates[i])
-        logger.error(f'>>>>> dates >>>>>>>>>>>>>>>>> {dates}')
         statement_balance[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', statement_balance[i])
-        logger.error(f'>>>>> statement_balance >>>>> {statement_balance}')
         clrd_for_interest[i] = re.sub('|'.join(map(re.escape, unwanted_chars)), '', clrd_for_interest[i])
-        logger.error(f'>>>>> clrd_for_interest >>>>> {clrd_for_interest}')
 
     df = pd.DataFrame({
         "DETAILS": details,
@@ -753,6 +807,8 @@ def processBarclays_Scanned(file, filename):
         "CLRD FOR INTEREST": clrd_for_interest,
     })
 
+    logger.error(f"<<<<<<<<<< processBarclays_Scanned df >>>>>>>>>> {df}")
+
     try:
         with pd.ExcelWriter(f"{download_excel_path}{filename}.xlsx", engine="openpyxl") as writer:
             df.to_excel(writer, sheet_name=f"{filename}", index=False)
@@ -761,6 +817,9 @@ def processBarclays_Scanned(file, filename):
             for column_cells in worksheet.columns:
                 length = max(len(str(cell.value)) for cell in column_cells)
                 worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        logger.error(f"<<<<<<<<<< Succesfully Converted PDF In To Excel >>>>>>>>>> {filename}")
+
         return Response(status=201)
     except Exception:
         return Response(status=404)
