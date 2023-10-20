@@ -10,3 +10,4 @@ class Config:
     AWS_REGION = os.environ.get('AWS_REGION', 'ap-south-1')
     PDF_FILE_PATH = os.environ.get('PDF_FILE_PATH','')
     EXCEL_FILE_PATH = os.environ.get('EXCEL_FILE_PATH','')
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL','redis://localhost:6379/0')
